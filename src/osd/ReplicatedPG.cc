@@ -2169,6 +2169,16 @@ void ReplicatedPG::promote_object(ObjectContextRef obc,
     obc = get_object_context(missing_oid, true);
   }
 
+  /*
+   * Before promote complete, if there are  proxy-reads for the object,
+   * for this case we don't use DONTNEED.
+   */
+  unsigned src_fadvise_flags = LIBRADOS_OP_FLAG_FADVISE_SEQUENTIAL;
+  map<hobject_t, list<OpRequestRef> >::iterator q = in_progress_proxy_reads.find(obc->obs.oi.soid);
+  if (q == in_progress_proxy_reads.end()) {
+    src_fadvise_flags |= LIBRADOS_OP_FLAG_FADVISE_DONTNEED;
+  }
+
   PromoteCallback *cb = new PromoteCallback(obc, this);
   object_locator_t my_oloc = oloc;
   my_oloc.pool = pool.info.tier_of;
@@ -2177,7 +2187,7 @@ void ReplicatedPG::promote_object(ObjectContextRef obc,
 	     CEPH_OSD_COPY_FROM_FLAG_IGNORE_CACHE |
 	     CEPH_OSD_COPY_FROM_FLAG_MAP_SNAP_CLONE,
 	     obc->obs.oi.soid.snap == CEPH_NOSNAP,
-	     0, 0);
+	     src_fadvise_flags, 0);
 
   assert(obc->is_blocked());
 
