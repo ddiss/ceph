@@ -1979,10 +1979,18 @@ def mount_activate(
             # proceeding.
             rawdev = dev
             ptype = get_partition_type(rawdev)
-            if ptype not in [DMCRYPT_OSD_UUID]:
+            if ptype == DMCRYPT_OSD_UUID:
+                luks = False
+            if ptype == DMCRYPT_LUKS_OSD_UUID:
+                luks = True
+            else:
                 raise Error('activate --dmcrypt called for invalid dev %s' % (dev))
+
             part_uuid = get_partition_uuid(rawdev)
-            dmcrypt_key_path = os.path.join(dmcrypt_key_dir, part_uuid)
+            dmcrypt_key_path = get_dmcrypt_key_path(part_uuid, dmcrypt_key_dir, luks)
+	    if not os.path.exists(dmcrypt_key_path):
+                raise Error('could not locate dmcrypt key file at %s'
+			    % (dmcrypt_key_path))
             dev = dmcrypt_map(rawdev, dmcrypt_key_path, part_uuid)
 
     try:
@@ -2325,19 +2333,31 @@ def main_activate_journal(args):
         if args.dmcrypt:
             # journal dev corresponds to a dmcrypt cyphertext device - map
             # it before proceeding.
+
+            # dev corresponds to a dmcrypt cyphertext device - map it before
+            # proceeding.
             rawdev = args.dev
             ptype = get_partition_type(rawdev)
-            if ptype not in [DMCRYPT_JOURNAL_UUID]:
-                raise Error('activate-journal --dmcrypt called for invalid dev %s' % (rawdev))
+            if ptype == DMCRYPT_JOURNAL_UUID:
+                luks = False
+            if ptype == DMCRYPT_LUKS_JOURNAL_UUID:
+                luks = True
+            else:
+                raise Error('activate-journal --dmcrypt called for invalid dev %s' % (dev))
+
             part_uuid = get_partition_uuid(rawdev)
-            dmcrypt_key_path = os.path.join(args.dmcrypt_key_dir, part_uuid)
-            dev = dmcrypt_map(rawdev, dmcrypt_key_path, partd_uuid)
+            dmcrypt_key_path = get_dmcrypt_key_path(part_uuid, args.dmcrypt_key_dir, luks)
+	    if not os.path.exists(dmcrypt_key_path):
+                raise Error('could not locate dmcrypt key file at %s'
+			    % (dmcrypt_key_path))
+            dev = dmcrypt_map(rawdev, dmcrypt_key_path, part_uuid)
         else:
             dev = args.dev
 
         # FIXME: For an encrypted journal dev, does this return the cyphertext
         # or plaintext dev uuid!? Also, if the journal is encrypted, is the data
         # partition also always encrypted, or are mixed pairs supported!?
+        # FIXME: what about TOBE
         osd_uuid = get_journal_osd_uuid(dev)
         path = os.path.join('/dev/disk/by-partuuid/', osd_uuid.lower())
 
