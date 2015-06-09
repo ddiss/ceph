@@ -570,6 +570,7 @@ install -m 0644 -D udev/95-ceph-osd-alt.rules $RPM_BUILD_ROOT/lib/udev/rules.d/9
 %endif
 
 %if 0%{?suse_version}
+install -m 0644 -D udev/50-rbd.rules $RPM_BUILD_ROOT/usr/lib/udev/rules.d/50-rbd.rules
 install -m 0644 -D systemd/udev-rules.d-95-ceph-osd.rules $RPM_BUILD_ROOT/usr/lib/udev/rules.d/95-ceph-osd.rules
 %endif
 
@@ -727,7 +728,7 @@ mkdir -p %{_localstatedir}/run/ceph/
 %if 0%{?debian}
 /lib/udev/rules.d/50-rbd.rules
 %endif
-%if 0%{?rhel} >= 7 || 0%{?fedora}
+%if 0%{?rhel} >= 7 || 0%{?fedora} || 0%{?suse_version}
 /usr/lib/udev/rules.d/50-rbd.rules
 %endif
 %if 0%{?rhel} >= 7 || 0%{?fedora}
