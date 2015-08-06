@@ -1677,6 +1677,64 @@ def prepare_dev(
         except subprocess.CalledProcessError as e:
             raise Error(e)
 
+def dmcrypt_args_process(args):
+    cryptsetup_parameters_str = get_conf(
+        cluster=args.cluster,
+        variable='osd_cryptsetup_parameters',
+        )
+    if cryptsetup_parameters_str is None:
+        cryptsetup_parameters = []
+    else:
+        cryptsetup_parameters = shlex.split(cryptsetup_parameters_str)
+
+    dmcrypt_keysize_str = get_conf(
+        cluster=args.cluster,
+        variable='osd_dmcrypt_key_size',
+        )
+
+    dmcrypt_type = get_conf(
+        cluster=args.cluster,
+        variable='osd_dmcrypt_type',
+        )
+
+    if dmcrypt_type is None:
+        dmcrypt_type = "luks"
+
+    if dmcrypt_type == "plain":
+        if dmcrypt_keysize_str is None:
+            # This value is hard-coded in the udev script
+            dmcrypt_keysize = 256
+        else:
+            dmcrypt_keysize = int(dmcrypt_keysize_str)
+            LOG.warning('''ensure the 95-ceph-osd.rules file has been copied to /etc/udev/rules.d
+and modified to call cryptsetup with --key-size=%s'''
+                        % dmcrypt_keysize_str)
+
+        if len (cryptsetup_parameters) > 0:
+            LOG.warning('''ensure the 95-ceph-osd.rules file has been copied to /etc/udev/rules.d
+and modified to call cryptsetup with %s'''
+                        % cryptsetup_parameters_str)
+
+        cryptsetup_parameters = ['--key-size', str(dmcrypt_keysize)] + cryptsetup_parameters
+        luks = False
+    elif dmcrypt_type == "luks":
+        if dmcrypt_keysize_str is None:
+            # As LUKS will hash the 'passphrase' in .luks.key into a key, set a large default
+            # so if not updated for some time, it is still a
+            # reasonable value.
+            #
+            # We don't force this into the cryptsetup_parameters, as we want the cryptsetup defaults
+            # to prevail for the actual LUKS key lengths.
+            dmcrypt_keysize = 1024
+        else:
+            dmcrypt_keysize = int(dmcrypt_keysize_str)
+            cryptsetup_parameters = ['--key-size', str(dmcrypt_keysize)] + cryptsetup_parameters
+
+        luks = True
+    else:
+        raise Error('invalid osd_dmcrypt_type parameter (must be luks or plain): ', dmcrypt_type)
+
+    return (args.dmcrypt_key_dir, dmcrypt_keysize, cryptsetup_parameters, luks)
 
 def main_prepare(args):
     journal_dm_keypath = None
@@ -1761,62 +1819,6 @@ def main_prepare(args):
             )
         journal_size = int(journal_size)
 
-        cryptsetup_parameters_str = get_conf(
-            cluster=args.cluster,
-            variable='osd_cryptsetup_parameters',
-            )
-        if cryptsetup_parameters_str is None:
-            cryptsetup_parameters = []
-        else:
-            cryptsetup_parameters = shlex.split(cryptsetup_parameters_str)
-
-        dmcrypt_keysize_str = get_conf(
-            cluster=args.cluster,
-            variable='osd_dmcrypt_key_size',
-            )
-
-        dmcrypt_type = get_conf(
-            cluster=args.cluster,
-            variable='osd_dmcrypt_type',
-            )
-
-        if dmcrypt_type is None:
-            dmcrypt_type = "luks"
-
-        if dmcrypt_type == "plain":
-            if dmcrypt_keysize_str is None:
-                # This value is hard-coded in the udev script
-                dmcrypt_keysize = 256
-            else:
-                dmcrypt_keysize = int(dmcrypt_keysize_str)
-                LOG.warning('''ensure the 95-ceph-osd.rules file has been copied to /etc/udev/rules.d
- and modified to call cryptsetup with --key-size=%s'''
-                            % dmcrypt_keysize_str)
-
-            if len (cryptsetup_parameters) > 0:
-                LOG.warning('''ensure the 95-ceph-osd.rules file has been copied to /etc/udev/rules.d
- and modified to call cryptsetup with %s'''
-                            % cryptsetup_parameters_str)
-
-            cryptsetup_parameters = ['--key-size', str(dmcrypt_keysize)] + cryptsetup_parameters
-            luks = False
-        elif dmcrypt_type == "luks":
-            if dmcrypt_keysize_str is None:
-                # As LUKS will hash the 'passphrase' in .luks.key into a key, set a large default
-                # so if not updated for some time, it is still a
-                # reasonable value.
-                #
-                # We don't force this into the cryptsetup_parameters, as we want the cryptsetup defaults
-                # to prevail for the actual LUKS key lengths.
-                dmcrypt_keysize = 1024
-            else:
-                dmcrypt_keysize = int(dmcrypt_keysize_str)
-                cryptsetup_parameters = ['--key-size', str(dmcrypt_keysize)] + cryptsetup_parameters
-
-            luks = True
-        else:
-            raise Error('invalid osd_dmcrypt_type parameter (must be luks or plain): ', dmcrypt_type)
-
         # colocate journal with data?
         if stat.S_ISBLK(dmode) and not is_partition(args.data) and args.journal is None and args.journal_file is None:
             LOG.info('Will colocate journal with data on %s', args.data)
@@ -1829,8 +1831,9 @@ def main_prepare(args):
 
         # dm-crypt keys?
         if args.dmcrypt:
-            journal_dm_keypath = get_or_create_dmcrypt_key(args.journal_uuid, args.dmcrypt_key_dir, dmcrypt_keysize, luks)
-            osd_dm_keypath = get_or_create_dmcrypt_key(args.osd_uuid, args.dmcrypt_key_dir, dmcrypt_keysize, luks)
+            (dmcrypt_key_dir, dmcrypt_keysize, cryptsetup_parameters, luks) = dmcrypt_args_process(args)
+            journal_dm_keypath = get_or_create_dmcrypt_key(args.journal_uuid, dmcrypt_key_dir, dmcrypt_keysize, luks)
+            osd_dm_keypath = get_or_create_dmcrypt_key(args.osd_uuid, dmcrypt_key_dir, dmcrypt_keysize, luks)
 
         # prepare journal
         (journal_symlink, journal_dmcrypt, journal_uuid) = prepare_journal(
@@ -2111,6 +2114,8 @@ def mount_activate(
     init,
     dmcrypt,
     dmcrypt_key_dir,
+    cryptsetup_parameters,
+    luks
     ):
 
     if dmcrypt:
@@ -2122,7 +2127,7 @@ def mount_activate(
                 raise Error('activate --dmcrypt called for invalid dev %s' % (dev))
             part_uuid = get_partition_uuid(rawdev)
             dmcrypt_key_path = os.path.join(dmcrypt_key_dir, part_uuid)
-            dev = dmcrypt_map(rawdev, dmcrypt_key_path, part_uuid)
+            dev = dmcrypt_map(rawdev, dmcrypt_key_path, part_uuid, cryptsetup_parameters, luks)
 
     try:
         fstype = detect_fstype(dev=dev)
@@ -2373,6 +2378,9 @@ def main_activate(args):
         LOG.info('suppressed activate request on %s', args.path)
         return
 
+    if args.dmcrypt:
+        (dmcrypt_key_dir, dmcrypt_keysize, cryptsetup_parameters, luks) = dmcrypt_args_process(args)
+
     activate_lock.acquire()  # noqa
     try:
         mode = os.stat(args.path).st_mode
@@ -2383,6 +2391,8 @@ def main_activate(args):
                 init=args.mark_init,
                 dmcrypt=args.dmcrypt,
                 dmcrypt_key_dir=args.dmcrypt_key_dir,
+                cryptsetup_parameters=cryptsetup_parameters,
+                luks=luks,
                 )
             osd_data = get_mount_point(cluster, osd_id)
 
@@ -2463,13 +2473,14 @@ def main_activate_journal(args):
         if args.dmcrypt:
             # journal dev corresponds to a dmcrypt cyphertext device - map
             # it before proceeding.
+            (dmcrypt_key_dir, dmcrypt_keysize, cryptsetup_parameters, luks) = dmcrypt_args_process(args)
             rawdev = args.dev
             ptype = get_partition_type(rawdev)
             if ptype not in [DMCRYPT_JOURNAL_UUID]:
                 raise Error('activate-journal --dmcrypt called for invalid dev %s' % (rawdev))
             part_uuid = get_partition_uuid(rawdev)
-            dmcrypt_key_path = os.path.join(args.dmcrypt_key_dir, part_uuid)
-            dev = dmcrypt_map(rawdev, dmcrypt_key_path, partd_uuid)
+            dmcrypt_key_path = os.path.join(dmcrypt_key_dir, part_uuid)
+            dev = dmcrypt_map(rawdev, dmcrypt_key_path, partd_uuid, cryptsetup_parameters, luks)
         else:
             dev = args.dev
 
@@ -2485,6 +2496,8 @@ def main_activate_journal(args):
             init=args.mark_init,
             dmcrypt=args.dmcrypt,
             dmcrypt_key_dir=args.dmcrypt_key_dir,
+            cryptsetup_parameters=cryptsetup_parameters,
+            luks=luks,
             )
 
         start_daemon(
@@ -2527,6 +2540,8 @@ def main_activate_all(args):
                     init=args.mark_init,
                     dmcrypt=False,
                     dmcrypt_key_dir='',
+                    cryptsetup_parameters=[],
+                    luks=False,
                     )
                 start_daemon(
                     cluster=cluster,
