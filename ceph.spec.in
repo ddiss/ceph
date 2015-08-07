@@ -167,10 +167,6 @@ Requires:	python-flask
 BuildRequires:	lttng-ust-devel
 BuildRequires:	libbabeltrace-devel
 %endif
-%if 0%{?suse_version} == 1315
-BuildRequires:	lttng-ust-devel
-BuildRequires:  babeltrace-devel
-%endif
 
 %description
 Ceph is a massively scalable, open-source, distributed
