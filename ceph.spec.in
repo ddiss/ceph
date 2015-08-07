@@ -1110,7 +1110,8 @@ ln -sf %{_libdir}/librbd.so.1 /usr/lib64/qemu/librbd.so.1
 %{_mandir}/man8/rbd-replay-prep.8*
 %{_bindir}/rbd-replay
 %{_bindir}/rbd-replay-many
-%if 0%{?fedora} || 0%{?rhel} == 6 || 0%{?suse_version} == 1315
+%if 0%{?fedora} || 0%{?rhel} == 6
+# when built with lttng
 %{_bindir}/rbd-replay-prep
 %endif
 
