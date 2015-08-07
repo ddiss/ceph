@@ -1739,6 +1739,8 @@ and modified to call cryptsetup with %s'''
 def main_prepare(args):
     journal_dm_keypath = None
     osd_dm_keypath = None
+    cryptsetup_parameters = None
+    luks = False
 
     try:
         prepare_lock.acquire()  # noqa
@@ -2370,6 +2372,9 @@ def activate(
 def main_activate(args):
     cluster = None
     osd_id = None
+    dmcrypt_key_dir = None
+    cryptsetup_parameters = None
+    luks = False
 
     if not os.path.exists(args.path):
         raise Error('%s does not exist' % args.path)
@@ -2390,7 +2395,7 @@ def main_activate(args):
                 activate_key_template=args.activate_key_template,
                 init=args.mark_init,
                 dmcrypt=args.dmcrypt,
-                dmcrypt_key_dir=args.dmcrypt_key_dir,
+                dmcrypt_key_dir=dmcrypt_key_dir,
                 cryptsetup_parameters=cryptsetup_parameters,
                 luks=luks,
                 )
@@ -2468,6 +2473,9 @@ def main_activate_journal(args):
     osd_id = None
     osd_uuid = None
     dev = None
+    dmcrypt_key_dir = None
+    cryptsetup_parameters = None
+    luks = False
     activate_lock.acquire()  # noqa
     try:
         if args.dmcrypt:
@@ -2495,7 +2503,7 @@ def main_activate_journal(args):
             activate_key_template=args.activate_key_template,
             init=args.mark_init,
             dmcrypt=args.dmcrypt,
-            dmcrypt_key_dir=args.dmcrypt_key_dir,
+            dmcrypt_key_dir=dmcrypt_key_dir,
             cryptsetup_parameters=cryptsetup_parameters,
             luks=luks,
             )
