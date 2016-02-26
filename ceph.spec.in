@@ -91,27 +91,6 @@ Source99:       ceph-rpmlintrc
 Requires:       ceph-osd = %{version}-%{release}
 Requires:       ceph-mds = %{version}-%{release}
 Requires:       ceph-mon = %{version}-%{release}
-Requires:	librbd1 = %{version}-%{release}
-Requires:	librados2 = %{version}-%{release}
-Requires:	libcephfs1 = %{version}-%{release}
-Requires:	ceph-common = %{version}-%{release}
-%if 0%{with selinux}
-Requires:	ceph-selinux = %{version}-%{release}
-%endif
-Requires:	python-rados = %{version}-%{release}
-Requires:	python-rbd = %{version}-%{release}
-Requires:	python-cephfs = %{version}-%{release}
-Requires:	python
-Requires:	python-requests
-Requires:	grep
-Requires:	xfsprogs
-Requires:	logrotate
-Requires:	parted
-Requires:	util-linux
-Requires:	hdparm
-Requires:	cryptsetup
-Requires:	findutils
-Requires:	which
 Requires(post):	binutils
 %if 0%{with cephfs_java}
 BuildRequires:	java-devel
@@ -246,6 +225,23 @@ on commodity hardware and delivers object, block and file system storage.
 Summary:       Ceph Base Package
 Group:         System Environment/Base
 Requires:      ceph-common = %{version}-%{release}
+Requires:      librbd1 = %{version}-%{release}
+Requires:      librados2 = %{version}-%{release}
+Requires:      libcephfs1 = %{version}-%{release}
+%if 0%{with selinux}
+Requires:      ceph-selinux = %{version}-%{release}
+%endif
+Requires:      python
+Requires:      python-requests
+Requires:      grep
+Requires:      xfsprogs
+Requires:      logrotate
+Requires:      parted
+Requires:      util-linux
+Requires:      hdparm
+Requires:      cryptsetup
+Requires:      findutils
+Requires:      which
 %if 0%{?suse_version}
 Requires:      lsb-release
 %endif
