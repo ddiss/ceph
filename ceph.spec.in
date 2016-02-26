@@ -246,6 +246,9 @@ on commodity hardware and delivers object, block and file system storage.
 Summary:       Ceph Base Package
 Group:         System Environment/Base
 Requires:      ceph-common = %{version}-%{release}
+%if 0%{?suse_version}
+Requires:      lsb-release
+%endif
 %description base
 Base is the package that includes all the files shared amongst ceph servers
 
