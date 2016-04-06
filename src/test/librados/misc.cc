@@ -1004,6 +1004,25 @@ TEST_F(LibRadosMisc, WriteSame) {
   ASSERT_EQ(0, rados_writesame(ioctx, "ws", buf, sizeof(buf), sizeof(buf), 0));
 }
 
+TEST_F(LibRadosMiscPP, CmpExtPP) {
+  bufferlist cmp_bl, bad_cmp_bl, write_bl, mismatch_bl;
+  uint64_t mismatch_off;
+  char stored_str[] = "1234567891";
+  char mismatch_str[] = "1234577777";
+
+  write_bl.append(stored_str);
+  ioctx.write("cmpextpp", write_bl, write_bl.length(), 0);
+  cmp_bl.append(stored_str);
+  ASSERT_EQ(0, ioctx.cmpext("cmpextpp", 0, 10, cmp_bl, &mismatch_bl));
+
+  bad_cmp_bl.append(mismatch_str);
+  ASSERT_EQ(-EILSEQ, ioctx.cmpext("cmpextpp", 0, 10, bad_cmp_bl, &mismatch_bl));
+  mismatch_off = le64_to_cpu(*(__u64 *)mismatch_bl.c_str());
+  ASSERT_EQ(true, mismatch_off == 5);
+  ASSERT_EQ(0, memcmp(stored_str, mismatch_bl.c_str() + sizeof(uint64_t),
+            strlen(mismatch_str)));
+}
+
 int main(int argc, char **argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
