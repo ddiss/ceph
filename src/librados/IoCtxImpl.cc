@@ -1220,6 +1220,19 @@ int librados::IoCtxImpl::read(const object_t& oid,
   return bl.length();
 }
 
+int librados::IoCtxImpl::cmpext(const object_t& oid, uint64_t off,
+                                size_t len, bufferlist& cmp_bl,
+                                bufferlist *mismatch_bl)
+{
+  if (cmp_bl.length() > UINT_MAX/2)
+    return -E2BIG;
+
+  ::ObjectOperation op;
+  prepare_assert_ops(&op);
+  op.cmpext(off, len, cmp_bl, mismatch_bl, NULL, NULL);
+  return operate_read(oid, &op, mismatch_bl);
+}
+
 int librados::IoCtxImpl::mapext(const object_t& oid,
 				uint64_t off, size_t len,
 				std::map<uint64_t,uint64_t>& m)

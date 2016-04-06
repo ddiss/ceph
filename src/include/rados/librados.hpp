@@ -296,6 +296,8 @@ namespace librados
     //flag mean ObjectOperationFlags
     void set_op_flags2(int flags);
 
+    void cmpext(size_t off, uint64_t len, bufferlist& cmp_bl,
+                bufferlist *pmismatch_bl, int *prval);
     void cmpxattr(const char *name, uint8_t op, const bufferlist& val);
     void cmpxattr(const char *name, uint8_t op, uint64_t v);
     void src_cmpxattr(const std::string& src_oid,
@@ -696,6 +698,8 @@ namespace librados
     int remove(const std::string& oid, int flags);
     int trunc(const std::string& oid, uint64_t size);
     int mapext(const std::string& o, uint64_t off, size_t len, std::map<uint64_t,uint64_t>& m);
+    int cmpext(const std::string& o, uint64_t off, size_t len,
+               bufferlist& cmp_bl, bufferlist *mismatch_bl);
     int sparse_read(const std::string& o, std::map<uint64_t,uint64_t>& m, bufferlist& bl, size_t len, uint64_t off);
     int getxattr(const std::string& oid, const char *name, bufferlist& bl);
     int getxattrs(const std::string& oid, std::map<std::string, bufferlist>& attrset);

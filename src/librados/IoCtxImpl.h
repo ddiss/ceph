@@ -141,6 +141,8 @@ struct librados::IoCtxImpl {
   int stat(const object_t& oid, uint64_t *psize, time_t *pmtime);
   int stat2(const object_t& oid, uint64_t *psize, struct timespec *pts);
   int trunc(const object_t& oid, uint64_t size);
+  int cmpext(const object_t& oid, uint64_t off, size_t len, bufferlist& cmp_bl,
+             bufferlist *mismatch_bl);
 
   int tmap_update(const object_t& oid, bufferlist& cmdbl);
   int tmap_put(const object_t& oid, bufferlist& bl);
