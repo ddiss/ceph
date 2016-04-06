@@ -644,6 +644,22 @@ int librados::IoCtxImpl::write_full(const object_t& oid, bufferlist& bl)
   return operate(oid, &op, NULL);
 }
 
+int librados::IoCtxImpl::writesame(const object_t& oid, bufferlist& bl,
+				   size_t data_len, size_t write_len,
+				   uint64_t off)
+{
+  if ((data_len > UINT_MAX/2) || (write_len > UINT_MAX/2))
+    return -E2BIG;
+  if ((data_len == 0) || (write_len % data_len))
+    return -EINVAL;
+  ::ObjectOperation op;
+  prepare_assert_ops(&op);
+  bufferlist mybl;
+  mybl.substr_of(bl, 0, data_len);
+  op.writesame(off, write_len, mybl);
+  return operate(oid, &op, NULL);
+}
+
 int librados::IoCtxImpl::clone_range(const object_t& dst_oid,
 				     uint64_t dst_offset,
 				     const object_t& src_oid,
@@ -930,6 +946,36 @@ int librados::IoCtxImpl::aio_write_full(const object_t &oid,
     snapc, bl, ut, 0,
     onack, onsafe, &c->objver);
   objecter->op_submit(o, &c->tid);
+
+  return 0;
+}
+
+int librados::IoCtxImpl::aio_writesame(const object_t &oid,
+				       AioCompletionImpl *c,
+				       const bufferlist& bl,
+				       size_t data_len,
+				       size_t write_len,
+				       uint64_t off)
+{
+  auto ut = ceph::real_clock::now(client->cct);
+
+  if ((data_len > UINT_MAX/2) || (write_len > UINT_MAX/2))
+    return -E2BIG;
+  if ((data_len == 0) || (write_len % data_len))
+    return -EINVAL;
+  /* can't write to a snapshot */
+  if (snap_seq != CEPH_NOSNAP)
+    return -EROFS;
+
+  Context *onack = new C_aio_Ack(c);
+  Context *onsafe = new C_aio_Safe(c);
+
+  c->io = this;
+  queue_aio_write(c);
+
+  c->tid = objecter->writesame(oid, oloc, data_len, write_len, off,
+			       snapc, bl, ut, 0,
+			       onack, onsafe, &c->objver);
 
   return 0;
 }
