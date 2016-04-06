@@ -140,6 +140,15 @@ void librados::ObjectOperation::set_op_flags2(int flags)
   ::set_op_flags(o, flags);
 }
 
+void librados::ObjectOperation::cmpext(size_t off, uint64_t len,
+                                       bufferlist &cmp_bl,
+                                       bufferlist *pmismatch_bl,
+                                       int *prval)
+{
+  ::ObjectOperation *o = &impl->o;
+  o->cmpext(off, len, cmp_bl, pmismatch_bl, prval, NULL);
+}
+
 void librados::ObjectOperation::cmpxattr(const char *name, uint8_t op, const bufferlist& v)
 {
   ::ObjectOperation *o = &impl->o;
@@ -1237,6 +1246,13 @@ int librados::IoCtx::mapext(const std::string& oid, uint64_t off, size_t len,
 {
   object_t obj(oid);
   return io_ctx_impl->mapext(obj, off, len, m);
+}
+
+int librados::IoCtx::cmpext(const std::string& oid, uint64_t off, size_t len,
+                            bufferlist& cmp_bl, bufferlist *mismatch_bl)
+{
+  object_t obj(oid);
+  return io_ctx_impl->cmpext(obj, off, len, cmp_bl, mismatch_bl);
 }
 
 int librados::IoCtx::sparse_read(const std::string& oid, std::map<uint64_t,uint64_t>& m,

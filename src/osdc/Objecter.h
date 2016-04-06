@@ -321,6 +321,17 @@ struct ObjectOperation {
     out_rval[p] = prval;
   }
   // object data
+  void cmpext(uint64_t off, uint64_t len, bufferlist& cmp_bl,
+              bufferlist *pmismatch_bl, int *prval,
+              Context* ctx) {
+    bufferlist bl;
+    add_data(CEPH_OSD_OP_CMPEXT, off, len, cmp_bl);
+    unsigned p = ops.size() - 1;
+    out_bl[p] = pmismatch_bl;
+    out_rval[p] = prval;
+    out_handler[p] = ctx;
+  }
+
   void read(uint64_t off, uint64_t len, bufferlist *pbl, int *prval,
 	    Context* ctx) {
     bufferlist bl;
