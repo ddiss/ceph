@@ -296,7 +296,7 @@ namespace librados
     //flag mean ObjectOperationFlags
     void set_op_flags2(int flags);
 
-    void cmpext(size_t off, uint64_t len, bufferlist& cmp_bl,
+    void cmpext(uint64_t off, size_t len, bufferlist& cmp_bl,
                 bufferlist *pmismatch_bl, int *prval);
     void cmpxattr(const char *name, uint8_t op, const bufferlist& val);
     void cmpxattr(const char *name, uint8_t op, uint64_t v);
