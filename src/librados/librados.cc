@@ -4861,6 +4861,33 @@ extern "C" void rados_write_op_assert_exists(rados_write_op_t write_op)
   tracepoint(librados, rados_write_op_assert_exists_exit);
 }
 
+class C_bl_to_buf : public Context {
+  char *out_buf;
+  size_t out_len;
+  size_t *bytes_read;
+  int *prval;
+public:
+  bufferlist out_bl;
+  C_bl_to_buf(char *out_buf,
+	      size_t out_len,
+	      size_t *bytes_read,
+	      int *prval) : out_buf(out_buf), out_len(out_len),
+			    bytes_read(bytes_read), prval(prval) {}
+  void finish(int r) {
+    if (out_bl.length() > out_len) {
+      if (prval)
+	*prval = -ERANGE;
+      if (bytes_read)
+	*bytes_read = 0;
+      return;
+    }
+    if (bytes_read)
+      *bytes_read = out_bl.length();
+    if (out_buf && !out_bl.is_provided_buffer(out_buf))
+      out_bl.copy(0, out_bl.length(), out_buf);
+  }
+};
+
 extern "C" void rados_write_op_cmpxattr(rados_write_op_t write_op,
                                        const char *name,
 				       uint8_t comparison_operator,
@@ -5207,33 +5234,6 @@ extern "C" void rados_read_op_stat(rados_read_op_t read_op,
   ((::ObjectOperation *)read_op)->stat(psize, pmtime, prval);
   tracepoint(librados, rados_read_op_stat_exit);
 }
-
-class C_bl_to_buf : public Context {
-  char *out_buf;
-  size_t out_len;
-  size_t *bytes_read;
-  int *prval;
-public:
-  bufferlist out_bl;
-  C_bl_to_buf(char *out_buf,
-	      size_t out_len,
-	      size_t *bytes_read,
-	      int *prval) : out_buf(out_buf), out_len(out_len),
-			    bytes_read(bytes_read), prval(prval) {}
-  void finish(int r) {
-    if (out_bl.length() > out_len) {
-      if (prval)
-	*prval = -ERANGE;
-      if (bytes_read)
-	*bytes_read = 0;
-      return;
-    }
-    if (bytes_read)
-      *bytes_read = out_bl.length();
-    if (out_buf && !out_bl.is_provided_buffer(out_buf))
-      out_bl.copy(0, out_bl.length(), out_buf);
-  }
-};
 
 extern "C" void rados_read_op_read(rados_read_op_t read_op,
 				   uint64_t offset,
