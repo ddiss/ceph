@@ -5,6 +5,7 @@
 #include <string>
 
 #include "include/rados/librados.h"
+#include "include/byteorder.h"
 #include "test/librados/test.h"
 #include "test/librados/TestCase.h"
 
@@ -593,6 +594,56 @@ TEST_F(CReadOpsTest, GetXattrs) {
   EXPECT_EQ(0, rval);
   rados_release_read_op(op);
   compare_xattrs(keys, vals, lens, 4, it);
+
+  remove_object();
+}
+
+TEST_F(CReadOpsTest, cmpext) {
+  // buffer includes offset of miscompare + actual data
+  char mismatch_buf[sizeof(uint64_t) + len];
+  char buf[len];
+  uint64_t mismatch_off = 0;
+  size_t mismatch_len = 0;
+  size_t bytes_read = 0;
+  int cmpext_val = 0;
+  int read_val = 0;
+
+  write_object();
+
+  // cmpext with match should ensure that the following read is successful
+  rados_read_op_t op = rados_create_read_op();
+  ASSERT_TRUE(op);
+  // @obj, @data and @len correspond to object initialised by write_object()
+  rados_read_op_cmpext(op, data, len, 0, mismatch_buf, sizeof(mismatch_buf),
+		       &mismatch_len, &cmpext_val);
+  rados_read_op_read(op, 0, len, buf, &bytes_read, &read_val);
+  ASSERT_EQ(0, rados_read_op_operate(op, ioctx, obj, 0));
+  ASSERT_EQ(len, bytes_read);
+  ASSERT_EQ(0, memcmp(data, buf, len));
+  rados_release_read_op(op);
+
+  // cmpext with mismatch should fail and fill mismatch_buf accordingly
+  memset(mismatch_buf, 0, sizeof(mismatch_buf));
+  memset(buf, 0, sizeof(buf));
+  mismatch_len = 0;
+  bytes_read = 0;
+  cmpext_val = 0;
+  read_val = 0;
+  op = rados_create_read_op();
+  ASSERT_TRUE(op);
+  ASSERT_TRUE(strlen("mismatch") <= sizeof(mismatch_buf));
+  // @obj, @data and @len correspond to object initialised by write_object()
+  rados_read_op_cmpext(op, "mismatch", strlen("mismatch"), 0, mismatch_buf,
+		       sizeof(mismatch_buf), &mismatch_len, &cmpext_val);
+  rados_read_op_read(op, 0, len, buf, &bytes_read, &read_val);
+  ASSERT_EQ(-EILSEQ, rados_read_op_operate(op, ioctx, obj, 0));
+  rados_release_read_op(op);
+
+  ASSERT_EQ(mismatch_len, sizeof(uint64_t) + len);
+  mismatch_off = le64_to_cpu(*(__u64 *)mismatch_buf);
+  ASSERT_EQ(mismatch_off, 0);
+  ASSERT_EQ(0, memcmp(mismatch_buf + sizeof(uint64_t), data, len));
+  ASSERT_EQ(-EILSEQ, cmpext_val);
 
   remove_object();
 }
