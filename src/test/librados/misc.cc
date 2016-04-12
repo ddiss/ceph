@@ -1018,9 +1018,39 @@ TEST_F(LibRadosMiscPP, CmpExtPP) {
   bad_cmp_bl.append(mismatch_str);
   ASSERT_EQ(-EILSEQ, ioctx.cmpext("cmpextpp", 0, 10, bad_cmp_bl, &mismatch_bl));
   mismatch_off = le64_to_cpu(*(__u64 *)mismatch_bl.c_str());
-  ASSERT_EQ(true, mismatch_off == 5);
+  ASSERT_EQ(mismatch_off, 5);
   ASSERT_EQ(0, memcmp(stored_str, mismatch_bl.c_str() + sizeof(uint64_t),
             strlen(mismatch_str)));
+}
+
+TEST_F(LibRadosMisc, CmpExt) {
+  bufferlist cmp_bl, bad_cmp_bl, write_bl, mismatch_bl;
+  uint64_t mismatch_off;
+  char stored_str[] = "1234567891";
+  char mismatch_str[] = "1234577777";
+  char mismatch_buf[sizeof(uint64_t) + sizeof(stored_str)];
+  size_t mismatch_len;
+
+  ASSERT_EQ(0,
+	    rados_write(ioctx, "cmpextpp", stored_str, sizeof(stored_str), 0));
+
+  memset(mismatch_buf, 0, sizeof(mismatch_buf));
+  mismatch_len = 0;
+  ASSERT_EQ(0,
+	    rados_cmpext(ioctx, "cmpextpp", stored_str, sizeof(stored_str), 0,
+			 mismatch_buf, sizeof(mismatch_buf), &mismatch_len));
+
+  memset(mismatch_buf, 0, sizeof(mismatch_buf));
+  mismatch_len = 0;
+  ASSERT_EQ(-EILSEQ,
+	    rados_cmpext(ioctx, "cmpextpp", mismatch_str, sizeof(mismatch_str),
+			 0, mismatch_buf, sizeof(mismatch_buf), &mismatch_len));
+
+  ASSERT_EQ(mismatch_len, sizeof(uint64_t) + sizeof(stored_str));
+  mismatch_off = le64_to_cpu(*(__u64 *)mismatch_buf);
+  ASSERT_EQ(mismatch_off, 5);
+  ASSERT_EQ(0, memcmp(stored_str, mismatch_buf + sizeof(uint64_t),
+		      sizeof(stored_str)));
 }
 
 int main(int argc, char **argv)
