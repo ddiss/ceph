@@ -166,6 +166,9 @@ class FakeDispatcher : public Dispatcher {
     }
     got_remote_reset = true;
   }
+  bool ms_handle_refused(Connection *con) {
+    return false;
+  }
   void ms_fast_dispatch(Message *m) {
     Mutex::Locker l(lock);
     Session *s = static_cast<Session*>(m->get_connection()->get_priv());
@@ -746,6 +749,9 @@ class SyntheticDispatcher : public Dispatcher {
     conn_sent.erase(con);
     got_remote_reset = true;
   }
+  bool ms_handle_refused(Connection *con) {
+    return false;
+  }
   void ms_fast_dispatch(Message *m) {
     // MSG_COMMAND is used to disorganize regular message flow
     if (m->get_type() == MSG_COMMAND) {
@@ -1317,6 +1323,9 @@ class MarkdownDispatcher : public Dispatcher {
     Mutex::Locker l(lock);
     conns.erase(con);
     cerr << __func__ << con << std::endl;
+  }
+  bool ms_handle_refused(Connection *con) {
+    return false;
   }
   void ms_fast_dispatch(Message *m) {
     assert(0);
