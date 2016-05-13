@@ -931,17 +931,6 @@ namespace librados
 		   uint64_t *mismatch_off,
 		   uint64_t off,
 		   bufferlist& cmp_bl);
-    /**
-     * Asynchronously compare an on-disk snapshot range with a buffer
-     *
-     * The same as aio_cmpext(), with an explicit snapid parameter.
-     */
-    int aio_cmpext(const std::string& oid,
-		   librados::AioCompletion *c,
-		   bufferlist *mismatch_bl,
-		   uint64_t *mismatch_off,
-		   uint64_t off,
-		   bufferlist& cmp_bl, uint64_t snapid);
     int aio_write(const std::string& oid, AioCompletion *c, const bufferlist& bl,
 		  size_t len, uint64_t off);
     int aio_append(const std::string& oid, AioCompletion *c, const bufferlist& bl,

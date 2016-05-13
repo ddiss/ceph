@@ -1801,18 +1801,7 @@ int librados::IoCtx::aio_cmpext(const std::string& oid,
 				bufferlist& cmp_bl)
 {
   return io_ctx_impl->aio_cmpext(oid, c->pc, off, cmp_bl, mismatch_bl,
-				 mismatch_off, io_ctx_impl->snap_seq);
-}
-
-int librados::IoCtx::aio_cmpext(const std::string& oid,
-				librados::AioCompletion *c,
-				bufferlist *mismatch_bl,
-				uint64_t *mismatch_off,
-				uint64_t off,
-				bufferlist& cmp_bl, uint64_t snapid)
-{
-  return io_ctx_impl->aio_cmpext(oid, c->pc, off, cmp_bl, mismatch_bl,
-				 mismatch_off, snapid);
+				 mismatch_off);
 }
 
 int librados::IoCtx::aio_sparse_read(const std::string& oid, librados::AioCompletion *c,
@@ -4525,7 +4514,7 @@ extern "C" int rados_aio_cmpext(rados_ioctx_t io, const char *o,
   object_t oid(o);
   int retval = ctx->aio_cmpext(oid, (librados::AioCompletionImpl*)completion,
 			       cmp_buf, cmp_len, off, mismatch_buf,
-			       mismatch_len, mismatch_off, ctx->snap_seq);
+			       mismatch_len, mismatch_off);
   tracepoint(librados, rados_aio_cmpext_exit, retval);
   return retval;
 }

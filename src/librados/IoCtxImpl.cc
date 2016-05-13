@@ -874,7 +874,7 @@ int librados::IoCtxImpl::aio_cmpext(const object_t& oid,
 				    uint64_t off,
 				    bufferlist& cmp_bl,
 				    bufferlist *mismatch_bl,
-				    uint64_t *mismatch_off, uint64_t snapid)
+				    uint64_t *mismatch_off)
 {
   if (cmp_bl.length() > UINT_MAX/2)
     return -E2BIG;
@@ -885,7 +885,7 @@ int librados::IoCtxImpl::aio_cmpext(const object_t& oid,
   c->io = this;
 
   Objecter::Op *o = objecter->prepare_cmpext_op(
-    oid, oloc, off, cmp_bl, snapid, mismatch_bl, mismatch_off, 0,
+    oid, oloc, off, cmp_bl, snap_seq, mismatch_bl, mismatch_off, 0,
     onack, &c->objver);
   objecter->op_submit(o, &c->tid);
   return 0;
@@ -897,7 +897,7 @@ int librados::IoCtxImpl::aio_cmpext(const object_t& oid,
 				    const char *cmp_buf, size_t cmp_len,
 				    uint64_t off,
 				    char *mismatch_buf, size_t *mismatch_len,
-				    uint64_t *mismatch_off, uint64_t snapid)
+				    uint64_t *mismatch_off)
 {
   if (cmp_len > UINT_MAX/2)
     return -E2BIG;
@@ -915,7 +915,7 @@ int librados::IoCtxImpl::aio_cmpext(const object_t& oid,
 		      mismatch_off, NULL);
 
   Objecter::Op *o = objecter->prepare_read_op(
-    oid, oloc, onack->m_ops, snapid, NULL, 0, onack, &c->objver);
+    oid, oloc, onack->m_ops, snap_seq, NULL, 0, onack, &c->objver);
   objecter->op_submit(o, &c->tid);
   return 0;
 }

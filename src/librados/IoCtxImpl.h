@@ -201,11 +201,11 @@ struct librados::IoCtxImpl {
 		      size_t len, uint64_t off, uint64_t snapid);
   int aio_cmpext(const object_t& oid, AioCompletionImpl *c, uint64_t off,
 		 bufferlist& cmp_bl, bufferlist *mismatch_bl,
-		 uint64_t *mismatch_off, uint64_t snapid);
+		 uint64_t *mismatch_off);
   int aio_cmpext(const object_t& oid, AioCompletionImpl *c,
 		 const char *cmp_buf, size_t cmp_len, uint64_t off,
 		 char *mismatch_buf, size_t *mismatch_len,
-		 uint64_t *mismatch_off, uint64_t snapid);
+		 uint64_t *mismatch_off);
   int aio_write(const object_t &oid, AioCompletionImpl *c,
 		const bufferlist& bl, size_t len, uint64_t off);
   int aio_append(const object_t &oid, AioCompletionImpl *c,
