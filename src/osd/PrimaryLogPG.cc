@@ -4732,7 +4732,7 @@ int PrimaryLogPG::do_extent_cmp(OpContext *ctx, OSDOp& osd_op, bool munged)
 
   if (op.extent.length == 0) {
     dout(20) << __func__ << " zero length extent" << dendl;
-    return finish_extent_cmp(osd_op, bufferlist{});
+    return finish_extent_cmp(osd_op, bufferlist{}, munged);
   } else if (!ctx->obs->exists || ctx->obs->oi.is_whiteout()) {
     dout(20) << __func__ << " object DNE" << dendl;
     return finish_extent_cmp(osd_op, {}, munged);
