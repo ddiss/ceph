@@ -830,6 +830,13 @@ map<pg_shard_t, ScrubMap *>::const_iterator
         try {
 	  bufferlist::iterator bliter = ss_bl.begin();
 	  ::decode(ss, bliter);
+	  // check that each clone_snaps entry has a consistent list
+	  snapid_t first, last;
+	  for (const auto& it : ss.clone_snaps) {
+	    if (it.second.empty()) {
+	      throw buffer::malformed_input("empty clone_snaps list");
+	    }
+	  }
         } catch (...) {
 	  // invalid snapset, probably corrupt
 	  shard_info.set_ss_attr_corrupted();
