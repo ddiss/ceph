@@ -6,6 +6,8 @@
 #include "include/utime.h"
 #include "objclass/objclass.h"
 
+#include "common/Clock.h"
+
 #include "cls_user_ops.h"
 
 CLS_VER(1,0)
@@ -405,6 +407,36 @@ static int cls_user_reset_stats(cls_method_context_t hctx, bufferlist *in, buffe
   return cls_cxx_map_write_header(hctx, &bl);
 }
 
+static int cls_user_expire_req(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
+{
+  bufferlist::iterator in_iter = in->begin();
+
+  cls_user_expire_req_op op;
+  try {
+    ::decode(op, in_iter);
+  } catch (buffer::error& err) {
+    CLS_LOG(1, "ERROR: cls_user_expire_req_op(): failed to decode op: %s",
+	    err.what());
+    return -EINVAL;
+  }
+
+  utime_t now = ceph_clock_now();
+  if (op.expiration <= now) {
+    char nbuf[32];
+    char ebuf[32];
+
+    now.sprintf(nbuf, sizeof(nbuf));
+    nbuf[sizeof(nbuf) - 1] = '\0';
+    op.expiration.sprintf(ebuf, sizeof(ebuf));
+    ebuf[sizeof(ebuf) - 1] = '\0';
+    CLS_LOG(0, "WARNING: current time %s exceeds request expiry %s",
+	    nbuf, ebuf);
+    return -ETIMEDOUT;
+  }
+
+  return 0;
+}
+
 CLS_INIT(user)
 {
   CLS_LOG(1, "Loaded user class!");
@@ -416,6 +448,7 @@ CLS_INIT(user)
   cls_method_handle_t h_user_list_buckets;
   cls_method_handle_t h_user_get_header;
   cls_method_handle_t h_user_reset_stats;
+  cls_method_handle_t h_user_expire_req;
 
   cls_register("user", &h_class);
 
@@ -428,6 +461,7 @@ CLS_INIT(user)
   cls_register_cxx_method(h_class, "list_buckets", CLS_METHOD_RD, cls_user_list_buckets, &h_user_list_buckets);
   cls_register_cxx_method(h_class, "get_header", CLS_METHOD_RD, cls_user_get_header, &h_user_get_header);
   cls_register_cxx_method(h_class, "reset_user_stats", CLS_METHOD_RD | CLS_METHOD_WR, cls_user_reset_stats, &h_user_reset_stats);
+  cls_register_cxx_method(h_class, "expire_req", CLS_METHOD_RD, cls_user_expire_req, &h_user_expire_req);
   return;
 }
 

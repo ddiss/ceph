@@ -111,4 +111,15 @@ void cls_user_complete_stats_sync_op::generate_test_instances(list<cls_user_comp
   ls.push_back(op);
 }
 
+void cls_user_expire_req_op::dump(Formatter *f) const
+{
+  f->dump_stream("expiration") << expiration;
+}
 
+void cls_user_expire_req_op::generate_test_instances(list<cls_user_expire_req_op*>& ls)
+{
+  ls.push_back(new cls_user_expire_req_op);
+  cls_user_expire_req_op *op = new cls_user_expire_req_op;
+  op->expiration = utime_t(12345, 0);
+  ls.push_back(op);
+}

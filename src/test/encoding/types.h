@@ -378,6 +378,7 @@ TYPE(cls_user_list_buckets_ret)
 TYPE(cls_user_get_header_op)
 TYPE(cls_user_get_header_ret)
 TYPE(cls_user_complete_stats_sync_op)
+TYPE(cls_user_expire_req_op)
 
 #include "cls/journal/cls_journal_types.h"
 TYPE(cls::journal::ObjectPosition)

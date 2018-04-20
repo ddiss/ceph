@@ -5803,7 +5803,7 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)
 	  ctx->user_modify = true;
 
 	bufferlist outdata;
-	dout(10) << "call method " << cname << "." << mname << dendl;
+	dout(10) << "call method " << cname << "." << mname << "with indata length=" << indata.length() << dendl;
 	int prev_rd = ctx->num_read;
 	int prev_wr = ctx->num_write;
 	result = method->exec((cls_method_context_t)&ctx, indata, outdata);
@@ -5819,7 +5819,7 @@ int PrimaryLogPG::do_osd_ops(OpContext *ctx, vector<OSDOp>& ops)
 	  break;
 	}
 
-	dout(10) << "method called response length=" << outdata.length() << dendl;
+	dout(10) << "method called response result=" << result << " length=" << outdata.length() << dendl;
 	op.extent.length = outdata.length();
 	osd_op.outdata.claim_append(outdata);
 	dout(30) << "out dump: ";

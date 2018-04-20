@@ -200,5 +200,26 @@ struct cls_user_complete_stats_sync_op {
 };
 WRITE_CLASS_ENCODER(cls_user_complete_stats_sync_op)
 
+struct cls_user_expire_req_op {
+  utime_t expiration;
+
+  cls_user_expire_req_op() {}
+
+  void encode(bufferlist& bl) const {
+    ENCODE_START(2, 2, bl);
+    ::encode(expiration, bl);
+    ENCODE_FINISH(bl);
+  }
+
+  void decode(bufferlist::iterator& bl) {
+    DECODE_START(2, bl);
+    ::decode(expiration, bl);
+    DECODE_FINISH(bl);
+  }
+
+  void dump(Formatter *f) const;
+  static void generate_test_instances(list<cls_user_expire_req_op*>& ls);
+};
+WRITE_CLASS_ENCODER(cls_user_expire_req_op)
 
 #endif
