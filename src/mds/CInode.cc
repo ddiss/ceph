@@ -3420,6 +3420,29 @@ int CInode::encode_inodestat(bufferlist& bl, Session *session,
     if (!pxattrs)
       pxattrs = pxattr ? get_projected_xattrs() : &xattrs;
     xattr_version = xattr_i->xattr_version;
+    if (snapid != CEPH_NOSNAP && realm) {
+      // add snapshot timestamp vxattr
+      map<snapid_t,const SnapInfo*> infomap;
+      realm->get_snap_info(infomap,
+                           snapid,  // min
+                           snapid); // max
+      if (infomap.size() == 1) {
+        const SnapInfo *si = infomap.begin()->second;
+
+        int len = snprintf(NULL, 0, "%llu.%09lu",
+                           (unsigned long long)si->stamp.tv.tv_sec,
+                           (unsigned long)si->stamp.tv.tv_nsec);
+	// +1 to include zero term
+        bufferptr b = buffer::create(len + 1);
+        len = snprintf(b.c_str(), b.length(), "%llu.%09lu",
+                           (unsigned long long)si->stamp.tv.tv_sec,
+                           (unsigned long)si->stamp.tv.tv_nsec);
+        ceph_assert((unsigned int)len < b.length());
+        auto em = pxattrs->emplace(std::piecewise_construct, std::forward_as_tuple(mempool::mds_co::string("ceph.snap.timestamp")), std::forward_as_tuple(b));
+        if (!em.second)
+          em.first->second = b;
+      }
+    }
   } else {
     xattr_version = 0;
   }
