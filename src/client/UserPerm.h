@@ -70,9 +70,30 @@ public:
   gid_t gid() const { return m_gid != (gid_t)-1 ? m_gid : ::getegid(); }
   bool gid_in_groups(gid_t id) const {
     if (id == gid()) return true;
-    for (int i = 0; i < gid_count; ++i) {
-      if (id == gids[i]) return true;
+    if (alloced_gids) {
+      for (int i = 0; i < gid_count; ++i) {
+        if (id == gids[i]) return true;
+      }
+      return false;
     }
+
+    /* like uid() and gid(), fallback to getgroups() if gids is uninitialized */
+    gid_t *group_ids = NULL;
+    int num_groups = ::getgroups(0, group_ids);
+    if (num_groups <= 0) return false;
+    group_ids = new gid_t[num_groups];
+    num_groups = ::getgroups(num_groups, group_ids);
+    if (num_groups <= 0) {
+      delete[] group_ids;
+      return false;
+    }
+    for (int i = 0; i < num_groups; ++i) {
+      if (id == group_ids[i]) {
+        delete[] group_ids;
+        return true;
+      }
+    }
+    delete[] group_ids;
     return false;
   }
   int get_gids(const gid_t **_gids) const { *_gids = gids; return gid_count; }
