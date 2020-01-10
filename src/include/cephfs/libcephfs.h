@@ -1612,6 +1612,10 @@ int ceph_ll_forget(struct ceph_mount_info *cmount, struct Inode *in,
 int ceph_ll_walk(struct ceph_mount_info *cmount, const char* name, Inode **i,
 		 struct ceph_statx *stx, unsigned int want, unsigned int flags,
 		 const UserPerm *perms);
+int ceph_ll_walk_from(struct ceph_mount_info *cmount, Inode *parent,
+		      const char *name, Inode **i,
+		      struct ceph_statx *stx, unsigned int want,
+		      unsigned int flags, const UserPerm *perms);
 int ceph_ll_getattr(struct ceph_mount_info *cmount, struct Inode *in,
 		    struct ceph_statx *stx, unsigned int want, unsigned int flags,
 		    const UserPerm *perms);

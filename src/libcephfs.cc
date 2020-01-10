@@ -1593,6 +1593,17 @@ extern "C" int ceph_ll_walk(struct ceph_mount_info *cmount, const char* name, In
   return(cmount->get_client()->ll_walk(name, i, stx, want, flags, *perms));
 }
 
+extern "C" int ceph_ll_walk_from(struct ceph_mount_info *cmount, Inode *parent,
+		 const char *name, Inode **i,
+		 struct ceph_statx *stx, unsigned int want, unsigned int flags,
+		 const UserPerm *perms)
+{
+  if (flags & ~CEPH_REQ_FLAG_MASK)
+    return -EINVAL;
+  return(cmount->get_client()->ll_walk_from(parent, name, i, stx, want, flags,
+					    *perms));
+}
+
 extern "C" int ceph_ll_getattr(class ceph_mount_info *cmount,
 			       Inode *in, struct ceph_statx *stx,
 			       unsigned int want, unsigned int flags,

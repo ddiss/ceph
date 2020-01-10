@@ -6415,17 +6415,10 @@ int Client::get_or_create(Inode *dir, const char* name,
   return 0;
 }
 
-int Client::path_walk(const filepath& origpath, InodeRef *end,
+int Client::path_walk_from(InodeRef cur, const filepath& origpath, InodeRef *end,
 		      const UserPerm& perms, bool followsym, int mask)
 {
   filepath path = origpath;
-  InodeRef cur;
-  if (origpath.absolute())
-    cur = root;
-  else
-    cur = cwd;
-  ceph_assert(cur);
-
   ldout(cct, 10) << __func__ << " " << path << dendl;
 
   int symlinks = 0;
@@ -6497,6 +6490,19 @@ int Client::path_walk(const filepath& origpath, InodeRef *end,
   return 0;
 }
 
+int Client::path_walk(const filepath& origpath, InodeRef *end,
+		      const UserPerm& perms, bool followsym, int mask)
+{
+  filepath path = origpath;
+  InodeRef cur;
+  if (origpath.absolute())
+    cur = root;
+  else
+    cur = cwd;
+  ceph_assert(cur);
+
+  return path_walk_from(cur, origpath, end, perms, followsym, mask);
+}
 
 // namespace ops
 
@@ -10792,6 +10798,40 @@ int Client::ll_walk(const char* name, Inode **out, struct ceph_statx *stx,
     *out = in.get();
     return 0;
   }
+}
+
+int Client::ll_walk_from(Inode *parent, const char *name, Inode **out, struct ceph_statx *stx,
+		    unsigned int want, unsigned int flags, const UserPerm& perms)
+{
+  std::lock_guard lock(client_lock);
+
+  if (unmounting)
+    return -ENOTCONN;
+
+  vinodeno_t vparent = _get_vino(parent);
+  filepath fp(name, 0);
+  InodeRef in;
+  int rc;
+  unsigned mask = statx_to_mask(flags, want);
+
+  ldout(cct, 3) << __func__ << " " << vparent << " " << name << dendl;
+  tout(cct) << __func__ << std::endl;
+  tout(cct) << name << std::endl;
+
+  rc = path_walk_from(parent, name, &in, perms, !(flags & AT_SYMLINK_NOFOLLOW), mask);
+  if (rc < 0) {
+    /* zero out mask, just in case... */
+    stx->stx_mask = 0;
+    stx->stx_ino = 0;
+    *out = NULL;
+    return rc;
+  }
+
+  ceph_assert(in);
+  fill_statx(in, mask, stx);
+  _ll_get(in.get());
+  *out = in.get();
+  return 0;
 }
 
 void Client::_ll_get(Inode *in)

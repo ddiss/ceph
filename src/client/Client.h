@@ -566,6 +566,9 @@ public:
   int ll_commit_blocks(Inode *in, uint64_t offset, uint64_t length);
 
   int ll_statfs(Inode *in, struct statvfs *stbuf, const UserPerm& perms);
+  int ll_walk_from(Inode *parent, const char *name, Inode **i,
+		   struct ceph_statx *stx, unsigned int want,
+		   unsigned int flags, const UserPerm& perms);
   int ll_walk(const char* name, Inode **i, struct ceph_statx *stx,
 	       unsigned int want, unsigned int flags, const UserPerm& perms);
   uint32_t ll_stripe_unit(Inode *in);
@@ -888,6 +891,8 @@ protected:
   void unlink(Dentry *dn, bool keepdir, bool keepdentry);
 
   // path traversal for high-level interface
+  int path_walk_from(InodeRef parent, const filepath& fp, InodeRef *end,
+		     const UserPerm& perms, bool followsym=true, int mask=0);
   int path_walk(const filepath& fp, InodeRef *end, const UserPerm& perms,
 		bool followsym=true, int mask=0);
 
