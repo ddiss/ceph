@@ -2273,3 +2273,29 @@ TEST(LibCephFS, SnapXattrs) {
 
   ceph_shutdown(cmount);
 }
+
+TEST(LibCephFS, RootLookupStat) {
+  struct ceph_mount_info *cmount;
+  ASSERT_EQ(ceph_create(&cmount, NULL), 0);
+  ASSERT_EQ(ceph_conf_read_file(cmount, NULL), 0);
+  ASSERT_EQ(0, ceph_conf_parse_env(cmount, NULL));
+  ASSERT_EQ(ceph_mount(cmount, NULL), 0);
+
+  Inode *root, *diri;
+  ASSERT_EQ(ceph_ll_lookup_root(cmount, &root), 0);
+
+  struct ceph_statx stx;
+  UserPerm *perms = ceph_mount_perms(cmount);
+
+  int mypid = getpid();
+  char dirname[PATH_MAX];
+
+  sprintf(dirname, "root-rel-dir-%u", mypid);
+  ASSERT_EQ(ceph_ll_mkdir(cmount, root, dirname, 0777,
+			&diri, &stx, 0, 0, perms), 0);
+
+  ASSERT_EQ(ceph_ll_lookup(cmount, root, "/", &diri, &stx,
+		  CEPH_STATX_INO, 0, perms), 0);
+
+  ceph_shutdown(cmount);
+}
