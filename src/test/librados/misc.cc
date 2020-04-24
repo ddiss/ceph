@@ -348,3 +348,88 @@ TEST_F(LibRadosMisc, ShutdownRace)
     threads[i].join();
   ASSERT_EQ(setrlimit(RLIMIT_NOFILE, &rold), 0);
 }
+
+static void forker_child_fail(int status, const char *msg)
+{
+	std::cout << msg << " failed: " << status << std::endl;
+	exit(status);
+}
+
+static pid_t forker_start_proc(rados_t cluster_parent)
+{
+	int ret;
+	rados_t cluster_child;
+
+	pid_t pid = fork();
+	if (pid != 0) {
+		/* parent */
+		return pid;
+	}
+	/* child - pass errors up to parent */
+	//rados_shutdown(cluster_parent);
+
+	ret = rados_create(&cluster_child, NULL);
+	if (ret < 0) {
+		forker_child_fail(ret, "create");
+	}
+	ret = rados_conf_read_file(cluster_child, NULL);
+	if (ret < 0) {
+		forker_child_fail(ret, "conf file read");
+	}
+	ret = rados_conf_parse_env(cluster_child, NULL);
+	if (ret < 0) {
+		forker_child_fail(ret, "conf parse");
+	}
+	ret = rados_connect(cluster_child);
+	if (ret < 0) {
+		forker_child_fail(ret, "connect");
+	}
+	rados_shutdown(cluster_child);
+
+	exit(0);
+}
+
+static void forker_sigchld_handle(int sig)
+{
+    std::cout << "got signal " << sig << std::endl;
+}
+
+// Test that forked children can perform I/O
+#define FORKER_NUM_FORKS 1
+TEST_F(LibRadosMisc, Forker)
+{
+  rados_t cluster_parent;
+  struct proc_state {
+    pid_t pid;
+  } procs[FORKER_NUM_FORKS];
+  struct sigaction act;
+  struct sigaction oldact;
+
+  memset(&act, 0, sizeof(act));
+  act.sa_handler = forker_sigchld_handle;
+  sigemptyset(&act.sa_mask);
+  sigaddset(&act.sa_mask, SIGCHLD);
+  ASSERT_EQ(sigaction(SIGCHLD, &act, &oldact), 0);
+
+  // connect to cluster before forking child proc
+  ASSERT_EQ(0, rados_create(&cluster_parent, NULL));
+  ASSERT_EQ(0, rados_conf_read_file(cluster_parent, NULL));
+  ASSERT_EQ(0, rados_conf_parse_env(cluster_parent, NULL));
+  ASSERT_EQ(0, rados_connect(cluster_parent));
+
+  for (int i = 0; i < FORKER_NUM_FORKS; ++i) {
+    procs[i].pid = forker_start_proc(cluster_parent);
+  }
+
+  for (int i = 0; i < FORKER_NUM_FORKS; ++i) {
+    int status = -1;
+    ASSERT_EQ(waitpid(procs[i].pid, &status, 0), procs[i].pid);
+    ASSERT_EQ(status, 0);
+  }
+
+  rados_shutdown(cluster_parent);
+
+  // restore previous signal context
+  ASSERT_EQ(sigaction(SIGCHLD, &oldact, NULL), 0);
+}
+#undef FORKER_NUM_FORKS
