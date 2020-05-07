@@ -509,6 +509,19 @@ CEPH_RADOS_API int rados_connect(rados_t cluster);
  */
 CEPH_RADOS_API void rados_shutdown(rados_t cluster);
 
+/**
+ * cleanup a cluster handle after a fork()
+ *
+ * Following fork(), a child process inherits memory contents from the parent.
+ * With Ceph this can be problematic, as stale global lock state inherited from
+ * the parent process may conflict with lock attempts from the child.
+ *
+ * @post the cluster handle cannot be used again from the child process
+ *
+ * @param cluster the inherited cluster to cleanup
+ */
+CEPH_RADOS_API void rados_cleanup_after_fork(rados_t cluster);
+
 /** @} init */
 
 /**

@@ -191,6 +191,17 @@ extern "C" void _rados_shutdown(rados_t cluster)
 }
 LIBRADOS_C_API_BASE_DEFAULT(rados_shutdown);
 
+extern "C" void _rados_cleanup_after_fork(rados_t cluster)
+{
+  tracepoint(librados, rados_cleanup_after_fork_enter, cluster);
+  librados::RadosClient *radosp = (librados::RadosClient *)cluster;
+  radosp->cleanup_after_fork();
+  // TODO shutdown?
+  //delete radosp;
+  tracepoint(librados, rados_cleanup_after_fork_exit);
+}
+LIBRADOS_C_API_BASE_DEFAULT(rados_cleanup_after_fork);
+
 extern "C" uint64_t _rados_get_instance_id(rados_t cluster)
 {
   tracepoint(librados, rados_get_instance_id_enter, cluster);

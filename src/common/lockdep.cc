@@ -77,7 +77,7 @@ void lockdep_register_ceph_context(CephContext *cct)
 void lockdep_unregister_ceph_context(CephContext *cct)
 {
   pthread_mutex_lock(&lockdep_mutex);
-  if (cct == g_lockdep_ceph_ctx) {
+  if (cct == NULL || cct == g_lockdep_ceph_ctx) {
     lockdep_dout(1) << "lockdep stop" << dendl;
     // this cct is going away; shut it down!
     g_lockdep = false;

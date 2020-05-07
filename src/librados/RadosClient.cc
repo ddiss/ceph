@@ -384,6 +384,13 @@ void librados::RadosClient::shutdown()
   ldout(cct, 1) << "shutdown" << dendl;
 }
 
+void librados::RadosClient::cleanup_after_fork()
+{
+  std::unique_lock l{lock};
+  // teardown lockdep context
+  lockdep_unregister_ceph_context(NULL);
+}
+
 int librados::RadosClient::watch_flush()
 {
   ldout(cct, 10) << __func__ << " enter" << dendl;
