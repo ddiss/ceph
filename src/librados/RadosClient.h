@@ -92,6 +92,7 @@ public:
   int ping_monitor(string mon_id, string *result);
   int connect();
   void shutdown();
+  void cleanup_after_fork();
 
   int watch_flush();
   int async_watch_flush(AioCompletionImpl *c);
