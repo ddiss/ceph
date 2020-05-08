@@ -367,6 +367,7 @@ static pid_t forker_start_proc(rados_t cluster_parent)
 	}
 	/* child - pass errors up to parent */
 	//rados_shutdown(cluster_parent);
+	rados_cleanup_after_fork(cluster_parent);
 
 	ret = rados_create(&cluster_child, NULL);
 	if (ret < 0) {
