@@ -52,6 +52,16 @@ static bool lockdep_force_backtrace()
 }
 
 /******* Functions **********/
+
+/*
+ * clean up lockdep state in child process on fork()
+ */
+static void lockdep_forked_child(void)
+{
+  pthread_mutex_init(&lockdep_mutex, NULL);
+  lockdep_unregister_ceph_context(NULL);
+}
+
 void lockdep_register_ceph_context(CephContext *cct)
 {
   static_assert((MAX_LOCKS > 0) && (MAX_LOCKS % 8 == 0),                   
@@ -71,14 +81,17 @@ void lockdep_register_ceph_context(CephContext *cct)
       memset((void*) &free_ids[0], 255, sizeof(free_ids));
     }
   }
+
+  // TODO: check for pthread_atfork() support at configure time?
+  pthread_atfork(NULL, NULL, lockdep_forked_child);
+
   pthread_mutex_unlock(&lockdep_mutex);
 }
 
 void lockdep_unregister_ceph_context(CephContext *cct)
 {
   pthread_mutex_lock(&lockdep_mutex);
-  if (cct == g_lockdep_ceph_ctx) {
-    lockdep_dout(1) << "lockdep stop" << dendl;
+  if (cct == NULL || cct == g_lockdep_ceph_ctx) {
     // this cct is going away; shut it down!
     g_lockdep = false;
     g_lockdep_ceph_ctx = NULL;
